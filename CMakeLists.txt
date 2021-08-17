@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(topological_navigation)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++1z)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -119,14 +119,14 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/topological_navigation.cpp
-# )
+#add_library(${PROJECT_NAME}
+#    src/${PROJECT_NAME}/TopologicalMap.cpp
+#)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -207,3 +207,12 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+set (SRC_LIST src/topological_nav.cpp src/TopologicalMap.cpp)
+set (TEST_SRC_LIST test/TopologicalMap_test.cpp src/TopologicalMap.cpp)
+
+add_executable(topological_nav ${SRC_LIST})
+target_link_libraries(topological_nav ${catkin_LIBRARIES})
+
+add_executable(topological_map_test ${TEST_SRC_LIST})
+target_link_libraries(topological_map_test ${catkin_LIBRARIES})

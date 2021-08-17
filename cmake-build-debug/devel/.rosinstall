@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/tt/catkin_ws/src/topological_navigation/cmake-build-debug/devel/setup.sh
