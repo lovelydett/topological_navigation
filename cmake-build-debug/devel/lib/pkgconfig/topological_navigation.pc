@@ -1,8 +1,0 @@
-prefix=/home/tt/catkin_ws/src/topological_navigation/cmake-build-debug/devel
-
-Name: topological_navigation
-Description: Description of topological_navigation
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
