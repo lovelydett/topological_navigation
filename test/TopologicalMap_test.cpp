@@ -10,7 +10,7 @@ geometry_msgs::Point create_point(float x, float y, float z = 0.f) {
   geometry_msgs::Point pt;
   pt.x = x;
   pt.y = y;
-  pt, z = z;
+  pt.z = z;
   return pt;
 }
 
