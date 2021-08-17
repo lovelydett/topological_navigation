@@ -75,7 +75,12 @@ bool TopologicalMap::add_edge_directed(const unsigned int src_id,
     ROS_WARN("invalid point id");
     return false;
   }
-  // Todo: check whether edge already exists
+  for (auto nb : graph[src_id]) {
+    if (nb == end_id) {
+      ROS_WARN("edge already exists");
+      return false;
+    }
+  }
   graph[src_id].emplace_back(end_id);
   return true;
 }
