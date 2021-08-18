@@ -20,7 +20,7 @@ private:
     // init subscriber
     // Todo: determine the topic name for this
     ros::NodeHandle n;
-    std::string pos_topic_name = "";
+    const std::string pos_topic_name = "pos";
     pos_sub = n.subscribe<geometry_msgs::Point>(
         pos_topic_name, 1, &TopologicalMapBuilder::position_callback, this);
   }
@@ -43,6 +43,7 @@ public:
 
   // record current pos as a new point and add a new edge (cur_pos, last_pos)
   bool add_current_pos() {
+    ROS_INFO("adding current pos");
     // first judge whether current pos is covered by previous pos(s)
     if (-1 != m.get_id_by_coord(current_pos)) {
       ROS_INFO("current pos too close to known pos, no need to add");
@@ -66,39 +67,25 @@ public:
     return true;
   }
 
-  bool load_topological_map(std::string filename = "./topoligical_map.txt") {
+  bool
+  load_topological_map(std::string filename = "../map/topological_map.txt") {
     if (!m.load_from_file(filename)) {
       return false;
     }
     last_pos_id_ = m.num_vertices() - 1; // set last!
   }
-  bool save_topological_map(std::string filename = "./topoligical_map.txt") {
+  bool
+  save_topological_map(std::string filename = "../map/topological_map.txt") {
     return m.save_to_file(filename);
   }
 
   ~TopologicalMapBuilder() {
     // before shutting down, save the map
-    m.save_to_file("./topological_map.txt");
+    save_topological_map();
   }
 };
 
 TopologicalMapBuilder *TopologicalMapBuilder::instance_ = nullptr;
-
-int scanKeyboard() {
-  int in;
-  struct termios new_settings;
-  struct termios stored_settings;
-  tcgetattr(0, &stored_settings);
-  new_settings = stored_settings;
-  new_settings.c_lflag &= (~ICANON);
-  new_settings.c_cc[VTIME] = 0;
-  tcgetattr(0, &stored_settings);
-  new_settings.c_cc[VMIN] = 1;
-  tcsetattr(0, TCSANOW, &new_settings);
-  in = getchar();
-  tcsetattr(0, TCSANOW, &stored_settings);
-  return in;
-}
 
 int main(int argc, char **argv) {
   // init ros node
