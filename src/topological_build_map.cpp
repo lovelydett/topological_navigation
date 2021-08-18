@@ -104,12 +104,15 @@ int main(int argc, char **argv) {
   // init ros node
   ros::init(argc, argv, "topological_build_map");
   ros::NodeHandle n;
+  ROS_INFO("topological_build_map node started");
 
   // create the builder, must after ros::init
   auto builder = TopologicalMapBuilder::Instance();
 
   // keyboard control thread
   std::thread keyboard_thread([&]() {
+    ROS_INFO("Press 'a' to add current pos, 's' to save current map, 'l' to "
+             "load map, 'e' to exit");
     while (true) {
       auto ch = getchar();
       if (ch == 'a') {
@@ -121,9 +124,12 @@ int main(int argc, char **argv) {
         std::string filename;
         std::cin >> filename;
         builder.load_topological_map(filename);
+      } else if (ch == 'e') {
+        break;
       }
     }
   });
+  keyboard_thread.detach();
 
   ros::spin();
 }

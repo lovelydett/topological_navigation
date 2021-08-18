@@ -209,14 +209,18 @@ include_directories(
 # catkin_add_nosetests(test)
 
 set (NAV_SRC_LIST src/topological_nav.cpp src/TopologicalMap.cpp)
-set (CREATE_MAP_SRC_LIST src/topological_build_map.cpp src/TopologicalMap.cpp)
-set (TEST_SRC_LIST test/TopologicalMap_test.cpp src/TopologicalMap.cpp)
+set (BUILD_MAP_SRC_LIST src/topological_build_map.cpp src/TopologicalMap.cpp)
+set (TEST_SRC_LIST_MAP test/TopologicalMap_test.cpp src/TopologicalMap.cpp)
+set (TEST_SRC_LIST_BUILD_MAP test/topological_build_map_test.cpp)
 
 add_executable(topological_nav ${NAV_SRC_LIST})
 target_link_libraries(topological_nav ${catkin_LIBRARIES})
 
-add_executable(topological_build_map ${CREATE_MAP_SRC_LIST})
-target_link_libraries(topological_create_map ${catkin_LIBRARIES})
+add_executable(topological_build_map ${BUILD_MAP_SRC_LIST})
+target_link_libraries(topological_build_map ${catkin_LIBRARIES})
 
-add_executable(topological_map_test ${TEST_SRC_LIST})
+add_executable(topological_map_test ${TEST_SRC_LIST_MAP})
 target_link_libraries(topological_map_test ${catkin_LIBRARIES})
+
+add_executable(topological_build_map_test ${TEST_SRC_LIST_BUILD_MAP})
+target_link_libraries(topological_build_map_test ${catkin_LIBRARIES})
