@@ -149,6 +149,8 @@ bool TopologicalMap::save_to_file(const std::string filename) const {
     fout << '\n';
   }
 
+  fout.close();
+
   return true;
 }
 
@@ -180,6 +182,8 @@ bool TopologicalMap::load_from_file(const std::string filename) {
       fin >> graph[id][j];
     }
   }
+
+  fin.close();
 
   return true;
 }
