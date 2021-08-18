@@ -13,15 +13,18 @@
 #include <unordered_map>
 #include <vector>
 
+// 1 = 5cm
+#define RESOLUTION 5
+
 class TopologicalMap {
 private:
-  TopologicalMap() = delete;
   float resolution_; // 1 : x(cm)
   std::unordered_map<unsigned int, geometry_msgs::Point> id_to_coords;
   std::vector<std::vector<unsigned int>> graph;
 
 public:
-  TopologicalMap(float resolution) : resolution_(resolution) {}
+  TopologicalMap(float resolution = RESOLUTION) : resolution_(resolution) {}
+  unsigned int num_vertices() const;
   bool get_coord_by_id(const unsigned int point_id,
                        geometry_msgs::Point *coord_ptr) const;
   int get_id_by_coord(const geometry_msgs::Point) const;

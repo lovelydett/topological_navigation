@@ -22,6 +22,8 @@ float getDist(const geometry_msgs::Point &pt1,
   return std::sqrt(getDistSquare(pt1, pt2));
 }
 
+unsigned int TopologicalMap::num_vertices() const { return graph.size(); }
+
 bool TopologicalMap::get_coord_by_id(const unsigned int point_id,
                                      geometry_msgs::Point *coord_ptr) const {
   auto it = id_to_coords.find(point_id);
@@ -61,6 +63,7 @@ int TopologicalMap::add_vertice(const geometry_msgs::Point coord) {
   id_to_coords[id] = coord;
   graph.emplace_back(std::vector<unsigned int>{});
   ROS_ASSERT(id_to_coords.size() == graph.size());
+  return id;
 }
 
 // add a new undirected edge into graph by point id

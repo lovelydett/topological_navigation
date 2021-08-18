@@ -2,6 +2,7 @@
 // Created by Yuting.Xie on 2021/8/17.
 // email: xyt@bupt.cn
 //
+#include "icecream.hpp"
 #include "topological_navigation/TopologicalMap.h"
 
 #include <cstdio>
@@ -44,6 +45,12 @@ int main() {
     printf("%d -> ", id);
   }
   printf("\n");
+
+  // test range localization
+  geometry_msgs::Point pt;
+  pt.x = 115.;
+  pt.y = 55.;
+  IC(m.get_id_by_coord(pt));
 
   return 0;
 }
