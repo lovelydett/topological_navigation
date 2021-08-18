@@ -9,13 +9,14 @@
 #include <geometry_msgs/Point.h>
 #include <ros/ros.h>
 
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 class TopologicalMap {
 private:
   TopologicalMap() = delete;
-  const float resolution_; // 1 : x(cm)
+  float resolution_; // 1 : x(cm)
   std::unordered_map<unsigned int, geometry_msgs::Point> id_to_coords;
   std::vector<std::vector<unsigned int>> graph;
 
@@ -37,6 +38,10 @@ public:
   // calculate the shortest path from src point to target point, returns a path
   std::vector<unsigned int> get_path(const unsigned int src_id,
                                      const unsigned int end_id) const;
+
+  // to .txt file and from .txt file
+  bool save_to_file(const std::string filename) const;
+  bool load_from_file(const std::string filename);
 };
 
 #endif // TOPOLOGICAL_NAVIGATION_TOPOLOGICALMAP_H
