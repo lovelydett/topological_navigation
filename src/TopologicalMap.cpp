@@ -9,19 +9,6 @@
 #include <fstream>
 #include <queue>
 
-float getDistSquare(const geometry_msgs::Point &pt1,
-                    const geometry_msgs::Point &pt2) {
-  auto dx = pt1.x - pt2.x;
-  auto dy = pt1.y - pt2.y;
-  auto dz = pt1.z - pt2.z;
-  return dx * dx + dy * dy + dz * dz;
-}
-
-float getDist(const geometry_msgs::Point &pt1,
-              const geometry_msgs::Point &pt2) {
-  return std::sqrt(getDistSquare(pt1, pt2));
-}
-
 unsigned int TopologicalMap::num_vertices() const { return graph.size(); }
 
 bool TopologicalMap::get_coord_by_id(const unsigned int point_id,
@@ -32,13 +19,13 @@ bool TopologicalMap::get_coord_by_id(const unsigned int point_id,
   }
   coord_ptr->x = it->second.x;
   coord_ptr->y = it->second.y;
-  // coord_ptr->z = it->second.z;
+  coord_ptr->z = it->second.z;
   return true;
 }
-int TopologicalMap::get_id_by_coord(const geometry_msgs::Point coord_in) const {
-  const float dist_threshold = 20 / resolution_;
+int TopologicalMap::get_id_by_coord(
+    const geometry_msgs::Point &coord_in) const {
   int point_id = -1;
-  float min_dist = 1.0 / 0.0;
+  float min_dist = 1.f / 0.f;
 
   // Todo: make this faster by B+ tree or sth
   for (const auto &[id, coord] : id_to_coords) {
@@ -49,11 +36,11 @@ int TopologicalMap::get_id_by_coord(const geometry_msgs::Point coord_in) const {
     }
   }
 
-  return min_dist < dist_threshold ? point_id : -1;
+  return min_dist < DIST_THRESHOLD ? point_id : -1;
 }
 
 // add a new vertice into graph by coord
-int TopologicalMap::add_vertice(const geometry_msgs::Point coord) {
+int TopologicalMap::add_vertice(const geometry_msgs::Point &coord) {
   int id = get_id_by_coord(coord);
   if (-1 != id) {
     ROS_INFO("adjacent coord overlaps, no need to add vertice");
@@ -90,15 +77,15 @@ bool TopologicalMap::add_edge_directed(const unsigned int src_id,
 }
 
 // calculate the shortest path from src point to target point, returns a path
-std::vector<unsigned int>
+std::list<unsigned int>
 TopologicalMap::get_path(const unsigned int src_id,
                          const unsigned int end_id) const {
   // Dijkstra with priority queue
   std::priority_queue<std::pair<float, unsigned int>> q; // dist at pair.first
   std::vector<float> min_dist(graph.size(), 1.f / 0.f);
   std::vector<bool> finish(graph.size(), false);
-  std::vector<std::vector<unsigned int>> paths(
-      graph.size(), std::vector<unsigned int>{src_id});
+  std::vector<std::list<unsigned int>> paths(graph.size(),
+                                             std::list<unsigned int>{src_id});
   q.push({0.f, src_id});
   for (int i = 0; i < graph.size(); i++) {
     auto [dist, id] = q.top();

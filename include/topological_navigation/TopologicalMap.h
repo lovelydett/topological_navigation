@@ -9,12 +9,33 @@
 #include <geometry_msgs/Point.h>
 #include <ros/ros.h>
 
+#include <list>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 // 1 = 5cm
-#define RESOLUTION 5
+#define RESOLUTION (5.f)
+#define DIST_THRESHOLD_CM (20.f)
+#define DIST_THRESHOLD (DIST_THRESHOLD_CM / RESOLUTION)
+
+inline float getDistSquare(const geometry_msgs::Point &pt1,
+                           const geometry_msgs::Point &pt2) {
+  auto dx = pt1.x - pt2.x;
+  auto dy = pt1.y - pt2.y;
+  auto dz = pt1.z - pt2.z;
+  return dx * dx + dy * dy + dz * dz;
+}
+
+inline float getDist(const geometry_msgs::Point &pt1,
+                     const geometry_msgs::Point &pt2) {
+  return std::sqrt(getDistSquare(pt1, pt2));
+}
+
+bool is_close_to(const geometry_msgs::Point &coord1,
+                 const geometry_msgs::Point &coord2) {
+  return getDist(coord1, coord2) < DIST_THRESHOLD;
+}
 
 class TopologicalMap {
 private:
@@ -27,10 +48,10 @@ public:
   unsigned int num_vertices() const;
   bool get_coord_by_id(const unsigned int point_id,
                        geometry_msgs::Point *coord_ptr) const;
-  int get_id_by_coord(const geometry_msgs::Point) const;
+  int get_id_by_coord(const geometry_msgs::Point &coord) const;
 
   // add a new vertice into graph by coord, returns its id
-  int add_vertice(const geometry_msgs::Point coord);
+  int add_vertice(const geometry_msgs::Point &coord);
 
   // add a new undirected edge into graph
   bool add_edge_undirected(const unsigned int point1_id,
@@ -39,8 +60,9 @@ public:
   bool add_edge_directed(const unsigned int src_id, const unsigned int end_id);
 
   // calculate the shortest path from src point to target point, returns a path
-  std::vector<unsigned int> get_path(const unsigned int src_id,
-                                     const unsigned int end_id) const;
+  // list
+  std::list<unsigned int> get_path(const unsigned int src_id,
+                                   const unsigned int end_id) const;
 
   // to .txt file and from .txt file
   bool save_to_file(const std::string filename) const;
