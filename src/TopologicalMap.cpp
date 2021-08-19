@@ -94,14 +94,14 @@ std::vector<unsigned int>
 TopologicalMap::get_path(const unsigned int src_id,
                          const unsigned int end_id) const {
   // Dijkstra with priority queue
-  std::priority_queue<std::pair<unsigned int, float>> q;
+  std::priority_queue<std::pair<float, unsigned int>> q; // dist at pair.first
   std::vector<float> min_dist(graph.size(), 1.f / 0.f);
   std::vector<bool> finish(graph.size(), false);
   std::vector<std::vector<unsigned int>> paths(
       graph.size(), std::vector<unsigned int>{src_id});
-  q.push({src_id, 0.f});
+  q.push({0.f, src_id});
   for (int i = 0; i < graph.size(); i++) {
-    auto [id, dist] = q.top();
+    auto [dist, id] = q.top();
     q.pop();
     finish[id] = true;
     geometry_msgs::Point coord1, coord2;
@@ -114,7 +114,7 @@ TopologicalMap::get_path(const unsigned int src_id,
       auto d = getDist(coord1, coord2);
       if (dist + d < min_dist[nb]) {
         min_dist[nb] = dist + d;
-        q.push({nb, dist + d});
+        q.push({dist + d, nb});
         paths[nb] = paths[id]; // update path src->nb
         paths[nb].emplace_back(nb);
       }
