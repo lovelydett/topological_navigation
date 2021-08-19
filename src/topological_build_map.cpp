@@ -24,6 +24,7 @@ private:
     pos_sub = n.subscribe<geometry_msgs::Point>(
         pos_topic_name, 1, &TopologicalMapBuilder::position_callback, this);
   }
+  TopologicalMapBuilder(const TopologicalMapBuilder &other_instance) = delete;
 
   // subscribe location msg
   void position_callback(const geometry_msgs::Point::ConstPtr &msg) {
@@ -45,11 +46,16 @@ public:
   bool add_current_pos() {
     ROS_INFO("adding current pos");
     // first judge whether current pos is covered by previous pos(s)
-    if (-1 != m.get_id_by_coord(current_pos)) {
-      ROS_INFO("current pos too close to known pos, no need to add");
+    int id = m.get_id_by_coord(current_pos);
+    if (-1 != id) {
+      geometry_msgs::Point coord;
+      m.get_coord_by_id(id, &coord);
+      ROS_INFO("current pos(%.2f, %.2f) too close to known pos(%.2f, %.2f), no "
+               "need to add",
+               current_pos.x, current_pos.y, coord.x, coord.y);
       return false;
     }
-    int id = m.add_vertice(current_pos); // add cur as a new point
+    id = m.add_vertice(current_pos); // add cur as a new point
     if (id == -1) {
       ROS_ERROR("failed to add current pos");
       return false;
@@ -67,15 +73,15 @@ public:
     return true;
   }
 
-  bool
-  load_topological_map(std::string filename = "../map/topological_map.txt") {
+  bool load_topological_map(
+      std::string filename = "/home/tt/Desktop/topological_map.txt") {
     if (!m.load_from_file(filename)) {
       return false;
     }
     last_pos_id_ = m.num_vertices() - 1; // set last!
   }
-  bool
-  save_topological_map(std::string filename = "../map/topological_map.txt") {
+  bool save_topological_map(
+      std::string filename = "/home/tt/Desktop/topological_map.txt") {
     return m.save_to_file(filename);
   }
 
@@ -94,7 +100,7 @@ int main(int argc, char **argv) {
   ROS_INFO("topological_build_map node started");
 
   // create the builder, must after ros::init
-  auto builder = TopologicalMapBuilder::Instance();
+  TopologicalMapBuilder &builder = TopologicalMapBuilder::Instance();
 
   // keyboard control thread
   std::thread keyboard_thread([&]() {
