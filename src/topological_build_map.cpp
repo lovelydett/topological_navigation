@@ -63,14 +63,16 @@ public:
   bool add_current_pos() {
     std::unique_lock<std::mutex> _(pos_lock_);
     ROS_INFO("adding current pos");
-    // first judge whether current pos is covered by previous pos(s)
+    // first judge whether current pos is covered by previous pos(s), if so,
+    // update last pos!
     int id = m.get_id_by_coord(current_pos_);
     if (-1 != id) {
       geometry_msgs::Point coord;
       m.get_coord_by_id(id, &coord);
       ROS_INFO("current pos(%.2f, %.2f) too close to known pos(%.2f, %.2f), no "
-               "need to add",
-               current_pos_.x, current_pos_.y, coord.x, coord.y);
+               "need to add, just update last pos to %d",
+               current_pos_.x, current_pos_.y, coord.x, coord.y, id);
+      last_pos_id_ = id;
       return false;
     }
     id = m.add_vertice(current_pos_); // add cur as a new point
