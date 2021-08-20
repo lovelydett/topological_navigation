@@ -14,8 +14,8 @@
 #include <unordered_map>
 #include <vector>
 
-// 1 = 5cm
-#define RESOLUTION (5.f)
+// 1 = 100cm
+#define RESOLUTION (100.f)
 #define DIST_THRESHOLD_CM (20.f)
 #define DIST_THRESHOLD (DIST_THRESHOLD_CM / RESOLUTION)
 
