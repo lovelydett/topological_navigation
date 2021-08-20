@@ -9,13 +9,15 @@
 #include <tf/transform_listener.h>
 
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 class TopologicalMapBuilder {
 private:
   static TopologicalMapBuilder *instance_;
   TopologicalMap m;
-  geometry_msgs::Point current_pos;
+  geometry_msgs::Point current_pos_;
+  std::mutex pos_lock_;
   int last_pos_id_;
   tf::TransformListener tf_listener_;
   TopologicalMapBuilder() : last_pos_id_(-1) {
@@ -29,12 +31,15 @@ private:
                                         ros::Time(0), ros::Duration(3.f));
           tf_listener_.lookupTransform("/map", "/base_laser_link", ros::Time(0),
                                        transform);
-          current_pos.x = transform.getOrigin().x();
-          current_pos.y = transform.getOrigin().y();
-          // current_pos.z = transform.getOrigin().z();
-          current_pos.z = 0.f;
-          ROS_INFO("current pos updated: %.2f, %.2f", current_pos.x,
-                   current_pos.y);
+          {
+            std::unique_lock<std::mutex> _(pos_lock_);
+            current_pos_.x = transform.getOrigin().x();
+            current_pos_.y = transform.getOrigin().y();
+            // current_pos_.z = transform.getOrigin().z();
+            current_pos_.z = 0.f;
+            ROS_INFO("current pos updated: %.2f, %.2f", current_pos_.x,
+                     current_pos_.y);
+          }
           ros::Duration(0.1f).sleep();
         } catch (tf::TransformException exception) {
           ROS_WARN("time-out for tf msg: %s", exception.what());
@@ -56,18 +61,19 @@ public:
 
   // record current pos as a new point and add a new edge (cur_pos, last_pos)
   bool add_current_pos() {
+    std::unique_lock<std::mutex> _(pos_lock_);
     ROS_INFO("adding current pos");
     // first judge whether current pos is covered by previous pos(s)
-    int id = m.get_id_by_coord(current_pos);
+    int id = m.get_id_by_coord(current_pos_);
     if (-1 != id) {
       geometry_msgs::Point coord;
       m.get_coord_by_id(id, &coord);
       ROS_INFO("current pos(%.2f, %.2f) too close to known pos(%.2f, %.2f), no "
                "need to add",
-               current_pos.x, current_pos.y, coord.x, coord.y);
+               current_pos_.x, current_pos_.y, coord.x, coord.y);
       return false;
     }
-    id = m.add_vertice(current_pos); // add cur as a new point
+    id = m.add_vertice(current_pos_); // add cur as a new point
     if (id == -1) {
       ROS_ERROR("failed to add current pos");
       return false;
@@ -135,6 +141,5 @@ int main(int argc, char **argv) {
     }
   });
   keyboard_thread.detach();
-
   ros::spin();
 }
