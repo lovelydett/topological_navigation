@@ -5,8 +5,10 @@
 
 #include "topological_navigation/TopologicalMap.h"
 
+#include <geometry_msgs/Transform.h>
+#include <tf/transform_listener.h>
+
 #include <iostream>
-#include <termio.h>
 #include <thread>
 
 class TopologicalMapBuilder {
@@ -15,24 +17,34 @@ private:
   TopologicalMap m;
   geometry_msgs::Point current_pos;
   int last_pos_id_;
-  ros::Subscriber pos_sub;
+  tf::TransformListener tf_listener_;
   TopologicalMapBuilder() : last_pos_id_(-1) {
-    // init subscriber
-    // Todo: determine the topic name for this
-    ros::NodeHandle n;
-    const std::string pos_topic_name = "pos";
-    pos_sub = n.subscribe<geometry_msgs::Point>(
-        pos_topic_name, 1, &TopologicalMapBuilder::position_callback, this);
+    std::thread listen([&]() {
+      ROS_INFO("tf_listener thread starts");
+      tf::StampedTransform transform;
+      while (ros::ok()) {
+        try {
+          // wait time > 3 secs -> throws exception
+          tf_listener_.waitForTransform("/map", "/base_laser_link",
+                                        ros::Time(0), ros::Duration(3.f));
+          tf_listener_.lookupTransform("/map", "/base_laser_link", ros::Time(0),
+                                       transform);
+          current_pos.x = transform.getOrigin().x();
+          current_pos.y = transform.getOrigin().y();
+          // current_pos.z = transform.getOrigin().z();
+          current_pos.z = 0.f;
+          ROS_INFO("current pos updated: %.2f, %.2f", current_pos.x,
+                   current_pos.y);
+          ros::Duration(0.1f).sleep();
+        } catch (tf::TransformException exception) {
+          ROS_WARN("time-out for tf msg: %s", exception.what());
+          ros::Duration(2.f).sleep();
+        }
+      }
+    });
+    listen.detach();
   }
   TopologicalMapBuilder(const TopologicalMapBuilder &other_instance) = delete;
-
-  // subscribe location msg
-  void position_callback(const geometry_msgs::Point::ConstPtr &msg) {
-    // Todo: lock protect
-    current_pos.x = msg->x;
-    current_pos.y = msg->y;
-    current_pos.z = msg->z;
-  }
 
 public:
   static TopologicalMapBuilder &Instance() {
