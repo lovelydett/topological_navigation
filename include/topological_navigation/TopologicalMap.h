@@ -32,8 +32,8 @@ inline float getDist(const geometry_msgs::Point &pt1,
   return std::sqrt(getDistSquare(pt1, pt2));
 }
 
-bool is_close_to(const geometry_msgs::Point &coord1,
-                 const geometry_msgs::Point &coord2) {
+inline bool is_close_to(const geometry_msgs::Point &coord1,
+                        const geometry_msgs::Point &coord2) {
   return getDist(coord1, coord2) < DIST_THRESHOLD;
 }
 
