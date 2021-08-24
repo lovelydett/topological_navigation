@@ -31,14 +31,14 @@ private:
 
   const std::string goal_topic_name_;
   const std::string topological_goal_topic_name_;
-  const std::string localization_topic_name;
+
+  std::recursive_mutex lock_path_;
 
   TopologicalNavigator(
       std::string filename = "/home/tt/Desktop/topological_map.txt")
       : distance_to_next_goal_(1.f / 0.f),
         goal_topic_name_("/move_base_simple/goal"),
-        topological_goal_topic_name_("/topological_nav/goal"),
-        localization_topic_name("/amcl_pose") {
+        topological_goal_topic_name_("/topological_nav/goal") {
     // load topological map
     if (-1 == m.load_from_file(filename)) {
       ROS_ERROR("unable to load topological map: %s", filename.c_str());
@@ -92,12 +92,16 @@ private:
       int last_goal_id;
       geometry_msgs::PoseStamped pose_msg;
       while (ros::ok()) {
-        if (path.empty() || is_close_to(current_pos_, goal)) {
-          // no need to publish
+        std::unique_lock<std::recursive_mutex> ulock_path(lock_path_,
+                                                          std::try_to_lock);
+        if (!ulock_path.owns_lock() || path.empty() ||
+            is_close_to(current_pos_, goal)) {
+          // do not have lock or no need to publish
           goto SLEEP;
         }
         m.get_coord_by_id(path.front(), &goal);
-        pose_msg.header.stamp.setNow(ros::Time::now());
+        // this line makes ros crash!!!
+        // pose_msg.header.stamp.setNow(ros::Time::now());
         pose_msg.header.frame_id = "map";
         pose_msg.pose.position = goal;
         // Quaternion in pose must be set!!!
@@ -116,6 +120,7 @@ private:
           ROS_INFO("goal published: id = %d, coord = %.2f, %.2f", path.front(),
                    goal.x, goal.y);
         }
+        ulock_path.unlock();
 
       SLEEP:
         rate.sleep();
@@ -125,37 +130,17 @@ private:
   TopologicalNavigator(const TopologicalNavigator &other) = delete;
   TopologicalNavigator(const TopologicalNavigator &&other) = delete;
 
-  void publish_current_goal() {
-    ROS_ASSERT(path.size() != 0);
-    geometry_msgs::Point goal;
-    m.get_coord_by_id(path.front(), &goal);
-    geometry_msgs::PoseStamped pose_msg;
-    pose_msg.header.stamp.setNow(ros::Time::now());
-    pose_msg.header.frame_id = "map";
-    pose_msg.pose.position = goal;
-    // Quaternion in pose must be set!!!
-    pose_msg.pose.orientation.w = 1.f;
-    pose_msg.pose.orientation.x = 0.f;
-    pose_msg.pose.orientation.y = 0.f;
-    pose_msg.pose.orientation.z = 0.f;
-    goal_pub_.publish(pose_msg);
-    distance_to_next_goal_ = getDist(current_pos_, goal);
-    ROS_INFO("a new middle goal point published: id = %d, coord = %.2f, %.2f",
-             path.front(), goal.x, goal.y);
-  }
-
   void current_pos_callback() {
-    // Todo: lock current pos and avoid deadlock
+    // pre-store cur pos to avoid inconsistency
     geometry_msgs::Point cur_pos = current_pos_;
-    // validate that we are getting closer if we are in navigation
-    // Todo: lock path
-    if (path.empty()) {
-      // ROS_INFO("idle: goal not set");
+    std::unique_lock<std::recursive_mutex> ulock_path(lock_path_,
+                                                      std::try_to_lock);
+    if (!ulock_path.owns_lock() || path.empty()) {
       return;
     }
-    // ROS_INFO("%d points left to reach final goal", path.size());
     geometry_msgs::Point cur_goal;
     ROS_ASSERT(m.get_coord_by_id(path.front(), &cur_goal));
+    // validate that we are getting closer if we are in navigation
     float dist = getDist(cur_pos, cur_goal);
     if (dist < distance_to_next_goal_) {
       ROS_WARN("seems we are getting farther from current goal");
@@ -169,7 +154,6 @@ private:
       if (!path.empty()) {
         ROS_INFO("arrived at middle point (%.2f, %.2f), %d left on path",
                  cur_goal.x, cur_goal.y, path.size());
-        // publish_current_goal();
       } else {
         ROS_INFO("arrived at final goal, navigation finished");
       }
@@ -177,9 +161,10 @@ private:
   }
 
   void topological_goal_callback(const geometry_msgs::Point::ConstPtr msg) {
-    ROS_INFO("new goal received, updating path");
+    ROS_INFO("new topological goal received, updating path");
     if (is_close_to(current_pos_, *msg)) {
-      ROS_INFO("new goal to close to cur pos, no need to update path");
+      ROS_INFO(
+          "new topological goal to close to cur pos, no need to update path");
       return;
     }
     update_goal(*msg);
@@ -203,6 +188,7 @@ private:
     }
 
     // get the path from src to end
+    std::unique_lock<std::recursive_mutex> _(lock_path_);
     path = m.get_path(src_id, end_id);
     ROS_INFO("update path to new goal: %d mid points", path.size());
     return true;
