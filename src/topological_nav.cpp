@@ -87,16 +87,18 @@ private:
     // publisher thread for current middle goal point
     std::thread([&]() {
       ROS_INFO("nav goal publisher thread starts");
-      ros::Rate rate(5);
+      ros::Rate rate(2);
       geometry_msgs::Point goal;
-      int last_goal_id;
+      int last_goal_id = -1;
       geometry_msgs::PoseStamped pose_msg;
       while (ros::ok()) {
         std::unique_lock<std::recursive_mutex> ulock_path(lock_path_,
                                                           std::try_to_lock);
-        if (!ulock_path.owns_lock() || path.empty() ||
-            is_close_to(current_pos_, goal)) {
-          // do not have lock or no need to publish
+        if (!ulock_path.owns_lock()) {
+          ROS_INFO("unable to lock path");
+          goto SLEEP;
+        }
+        if (path.empty() || last_goal_id == path.front()) {
           goto SLEEP;
         }
         m.get_coord_by_id(path.front(), &goal);
@@ -111,18 +113,14 @@ private:
         pose_msg.pose.orientation.z = 0.f;
         goal_pub_.publish(pose_msg);
         distance_to_next_goal_ = getDist(current_pos_, goal);
-        if (last_goal_id != path.front()) {
-          last_goal_id = path.front();
-          ROS_INFO(
-              "a new middle goal point published: id = %d, coord = %.2f, %.2f",
-              path.front(), goal.x, goal.y);
-        } else {
-          ROS_INFO("goal published: id = %d, coord = %.2f, %.2f", path.front(),
-                   goal.x, goal.y);
-        }
-        ulock_path.unlock();
+        last_goal_id = path.front();
+        ROS_INFO("a new middle goal %d (%.2f, %.2f) published", path.front(),
+                 goal.x, goal.y);
 
       SLEEP:
+        if (ulock_path.owns_lock()) {
+          ulock_path.unlock();
+        }
         rate.sleep();
       }
     }).detach();
@@ -161,18 +159,18 @@ private:
   }
 
   void topological_goal_callback(const geometry_msgs::Point::ConstPtr msg) {
-    ROS_INFO("new topological goal received, updating path");
+    ROS_INFO("new topological goal msg(%.2f, %.2f) received", msg->x, msg->y);
     if (is_close_to(current_pos_, *msg)) {
       ROS_INFO(
           "new topological goal to close to cur pos, no need to update path");
       return;
     }
-    update_goal(*msg);
-    // non need to actively publish new goal
-    // publish_current_goal();
+    update_path(*msg);
   }
 
-  bool update_goal(const geometry_msgs::Point &goal_point) {
+  bool update_path(const geometry_msgs::Point &goal_point) {
+    ROS_INFO("we have a new final goal(%.2f, %.2f), re-calculating new path",
+             goal_point.x, goal_point.y);
     // see where we are right now
     int src_id = m.get_id_by_coord(current_pos_);
     if (-1 == src_id) {
@@ -188,7 +186,12 @@ private:
     }
 
     // get the path from src to end
-    std::unique_lock<std::recursive_mutex> _(lock_path_);
+    std::unique_lock<std::recursive_mutex> ulock_path(lock_path_,
+                                                      std::try_to_lock);
+    while (!ulock_path.owns_lock()) {
+      ulock_path.try_lock();
+      ROS_INFO("waiting for path lock to update it");
+    }
     path = m.get_path(src_id, end_id);
     ROS_INFO("update path to new goal: %d mid points", path.size());
     return true;
@@ -223,7 +226,7 @@ int main(int argc, char **argv) {
       printf("input a goal (x, y):\n");
       scanf("%lf, %lf", &(goal_msg.x), &(goal_msg.y));
       pub.publish(goal_msg);
-      ROS_INFO("new goal published: %.2f, %.2f", goal_msg.x, goal_msg.y);
+      ROS_INFO("new final goal published: %.2f, %.2f", goal_msg.x, goal_msg.y);
     }
   });
   user_thread.detach();
