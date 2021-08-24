@@ -16,7 +16,7 @@
 
 // 1 = 100cm
 #define RESOLUTION (100.f)
-#define DIST_THRESHOLD_CM (20.f)
+#define DIST_THRESHOLD_CM (10.f)
 #define DIST_THRESHOLD (DIST_THRESHOLD_CM / RESOLUTION)
 
 inline float getDistSquare(const geometry_msgs::Point &pt1,

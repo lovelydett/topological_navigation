@@ -72,6 +72,8 @@ public:
       ROS_INFO("current pos(%.2f, %.2f) too close to known pos(%.2f, %.2f), no "
                "need to add, just update last pos to %d",
                current_pos_.x, current_pos_.y, coord.x, coord.y, id);
+      // should also add a path <last, cur> to avoid breaking the graph
+      m.add_edge_undirected(last_pos_id_, id);
       last_pos_id_ = id;
       return false;
     }
