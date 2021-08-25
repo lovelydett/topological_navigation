@@ -73,8 +73,8 @@ private:
           current_pos_.y = transform.getOrigin().y();
           // current_pos_.z = transform.getOrigin().z();
           current_pos_.z = 0.f;
-          ROS_INFO("current pos updated: %.2f, %.2f", current_pos_.x,
-                   current_pos_.y);
+          // ROS_INFO("current pos updated: %.2f, %.2f", current_pos_.x,
+          //         current_pos_.y);
           current_pos_callback();
         } catch (const tf::TransformException &exception) {
           ROS_WARN("time-out for tf msg: %s", exception.what());
