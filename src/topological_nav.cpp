@@ -19,7 +19,7 @@ class TopologicalNavigator {
 private:
   static TopologicalNavigator *instance_;
   geometry_msgs::Point current_pos_;
-  TopologicalMap m;
+  TopologicalMap *m;
   ros::Subscriber pos_sub_;
   ros::Subscriber goal_sub_;
   ros::Publisher goal_pub_;
@@ -27,33 +27,46 @@ private:
   std::list<unsigned int> path; // last point in path list is destination
   float distance_to_next_goal_;
 
-  const std::string goal_topic_name_;
-  const std::string topological_goal_topic_name_;
+  std::string hdmap_goal_topic_;
+  std::string topological_goal_topic_;
 
   std::recursive_mutex lock_path_;
 
-  TopologicalNavigator(
-      std::string filename = "/home/tt/Desktop/topological_map.txt")
-      : distance_to_next_goal_(1.f / 0.f),
-        goal_topic_name_("/move_base_simple/goal"),
-        topological_goal_topic_name_("/topological_nav/goal") {
+  TopologicalNavigator() {
+    distance_to_next_goal_ = 1.f / 0.f;
+
+    // resolve launch file params
+    ros::NodeHandle n;
+    float threshold_cm, resolution;
+    std::string map_file_path;
+    n.param<float>("threshold_cm", threshold_cm, 10.f);
+    n.param<float>("resolution", resolution, 100.f);
+    n.param<std::string>("map_file_path", map_file_path,
+                         "./topological_map.txt");
+    n.param<std::string>("hdmap_goal_topic", hdmap_goal_topic_,
+                         "/move_base_simple/goal");
+    n.param<std::string>("topological_goal_topic", topological_goal_topic_,
+                         "/topological_nav/goal");
+
+    // create topological map, resolution is actually useless
+    m = new TopologicalMap(resolution, threshold_cm);
+
     // load topological map
-    if (-1 == m.load_from_file(filename)) {
-      ROS_ERROR("unable to load topological map: %s", filename.c_str());
+    if (-1 == m->load_from_file(map_file_path)) {
+      ROS_ERROR("unable to load topological map: %s", map_file_path.c_str());
     } else {
       ROS_INFO("topological map: %s loaded, %d points in total",
-               filename.c_str(), m.num_vertices());
+               map_file_path.c_str(), m->num_vertices());
     }
     // init current pos to avoid weird situations
-    m.get_coord_by_id(0, &current_pos_);
+    m->get_coord_by_id(0, &current_pos_);
 
-    ros::NodeHandle n;
     // subscribe topological
     goal_sub_ =
-        n.subscribe(topological_goal_topic_name_, 1,
+        n.subscribe(topological_goal_topic_, 1,
                     &TopologicalNavigator::topological_goal_callback, this);
     // publish navigation goal to move_base
-    goal_pub_ = n.advertise<geometry_msgs::PoseStamped>(goal_topic_name_, 1);
+    goal_pub_ = n.advertise<geometry_msgs::PoseStamped>(hdmap_goal_topic_, 1);
 
     // listener thread for realtime pos
     std::thread([&]() {
@@ -99,7 +112,7 @@ private:
         if (path.empty() || last_goal_id == path.front()) {
           goto SLEEP;
         }
-        m.get_coord_by_id(path.front(), &goal);
+        m->get_coord_by_id(path.front(), &goal);
         // this line makes ros crash!!!
         // pose_msg.header.stamp.setNow(ros::Time::now());
         pose_msg.header.frame_id = "map";
@@ -111,7 +124,7 @@ private:
         pose_msg.pose.orientation.z = 0.f;
         goal_pub_.publish(pose_msg);
         distance_to_next_goal_ = getDist(current_pos_, goal);
-        last_goal_id = path.front();
+        last_goal_id = (int)path.front();
         ROS_INFO("a new middle goal %d (%.2f, %.2f) published", path.front(),
                  goal.x, goal.y);
 
@@ -135,7 +148,7 @@ private:
       return;
     }
     geometry_msgs::Point cur_goal;
-    ROS_ASSERT(m.get_coord_by_id(path.front(), &cur_goal));
+    ROS_ASSERT(m->get_coord_by_id(path.front(), &cur_goal));
     // validate that we are getting closer if we are in navigation
     float dist = getDist(cur_pos, cur_goal);
     if (dist < distance_to_next_goal_) {
@@ -144,11 +157,11 @@ private:
     distance_to_next_goal_ = dist;
 
     // judge if entering cur goal point
-    if (is_close_to(cur_pos, cur_goal)) {
+    if (is_close_to(cur_pos, cur_goal, m->threshold())) {
       // arriving at cur goal, publish next goal
       path.erase(path.begin());
       if (!path.empty()) {
-        ROS_INFO("arrived at middle point (%.2f, %.2f), %d left on path",
+        ROS_INFO("arrived at middle point (%.2f, %.2f), %ld left on path",
                  cur_goal.x, cur_goal.y, path.size());
       } else {
         ROS_INFO("arrived at final goal, navigation finished");
@@ -158,7 +171,7 @@ private:
 
   void topological_goal_callback(const geometry_msgs::Point::ConstPtr msg) {
     ROS_INFO("new topological goal msg(%.2f, %.2f) received", msg->x, msg->y);
-    if (is_close_to(current_pos_, *msg)) {
+    if (is_close_to(current_pos_, *msg, m->threshold())) {
       ROS_INFO(
           "new topological goal to close to cur pos, no need to update path");
       return;
@@ -170,14 +183,14 @@ private:
     ROS_INFO("we have a new final goal(%.2f, %.2f), re-calculating new path",
              goal_point.x, goal_point.y);
     // see where we are right now
-    int src_id = m.get_id_by_coord(current_pos_);
+    int src_id = m->get_id_by_coord(current_pos_);
     if (-1 == src_id) {
       ROS_WARN("current pos out of topological map, failed to update goal");
       return false;
     }
 
     // find target point id
-    int end_id = m.get_id_by_coord(goal_point);
+    int end_id = m->get_id_by_coord(goal_point);
     if (-1 == end_id) {
       ROS_WARN("destination pos out of topological map, failed to update goal");
       return false;
@@ -190,8 +203,8 @@ private:
       ulock_path.try_lock();
       ROS_INFO("waiting for path lock to update it");
     }
-    path = m.get_path(src_id, end_id);
-    ROS_INFO("update path to new goal: %d mid points", path.size());
+    path = m->get_path(src_id, end_id);
+    ROS_INFO("update path to new goal: %ld mid points", path.size());
     return true;
   }
 
