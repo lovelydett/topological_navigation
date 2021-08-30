@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
-   <arg name="resolution" default="100.0" />
-   <arg name="threshold_cm" default="5.0" />
+   <arg name="resolution" type="float" default="100.0" />
+   <arg name="threshold_cm" type="float" default="5.0" />
    <arg name="map_file_path" default="$(find topological_navigation)/map/topological_map.txt"/>
    <node pkg="topological_navigation" type="topological_build_map" name="topological_build_map" output="screen">
-        <param name="resolution" value="$(arg resolution)"/>
-        <param name="threshold_cm" value="$(arg threshold_cm)"/>
+        <param name="resolution" type="float" value="$(arg resolution)"/>
+        <param name="threshold_cm" type="float" value="$(arg threshold_cm)"/>
         <param name="map_file_path" value="$(arg map_file_path)"/>
    </node>
 </launch>

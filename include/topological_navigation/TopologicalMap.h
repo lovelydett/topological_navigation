@@ -14,11 +14,6 @@
 #include <unordered_map>
 #include <vector>
 
-// 1 = 100cm
-#define RESOLUTION (100.f)
-#define DIST_THRESHOLD_CM (10.f)
-#define DIST_THRESHOLD (DIST_THRESHOLD_CM / RESOLUTION)
-
 inline float getDistSquare(const geometry_msgs::Point &pt1,
                            const geometry_msgs::Point &pt2) {
   auto dx = pt1.x - pt2.x;
@@ -33,19 +28,23 @@ inline float getDist(const geometry_msgs::Point &pt1,
 }
 
 inline bool is_close_to(const geometry_msgs::Point &coord1,
-                        const geometry_msgs::Point &coord2) {
-  return getDist(coord1, coord2) < DIST_THRESHOLD;
+                        const geometry_msgs::Point &coord2,
+                        const float threshold) {
+  return getDist(coord1, coord2) < threshold;
 }
 
 class TopologicalMap {
 private:
   float resolution_; // 1 : x(cm)
+  float threshold_;  // range(on map) each point covers
   std::unordered_map<unsigned int, geometry_msgs::Point> id_to_coords;
   std::vector<std::vector<unsigned int>> graph;
 
 public:
-  TopologicalMap(float resolution = RESOLUTION) : resolution_(resolution) {}
+  TopologicalMap(float resolution = 100.f, float threshold_cm = 5.f)
+      : resolution_(resolution), threshold_(threshold_cm / resolution) {}
   unsigned int num_vertices() const;
+  float threshold() const;
   bool get_coord_by_id(const unsigned int point_id,
                        geometry_msgs::Point *coord_ptr) const;
   int get_id_by_coord(const geometry_msgs::Point &coord) const;

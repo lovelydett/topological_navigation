@@ -7,8 +7,6 @@
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <geometry_msgs/Transform.h>
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 

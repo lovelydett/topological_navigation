@@ -5,11 +5,11 @@
 
 #include "topological_navigation/TopologicalMap.h"
 
-#include <cmath>
 #include <fstream>
 #include <queue>
 
 unsigned int TopologicalMap::num_vertices() const { return graph.size(); }
+float TopologicalMap::threshold() const { return threshold_; }
 
 bool TopologicalMap::get_coord_by_id(const unsigned int point_id,
                                      geometry_msgs::Point *coord_ptr) const {
@@ -36,7 +36,7 @@ int TopologicalMap::get_id_by_coord(
     }
   }
 
-  return min_dist < DIST_THRESHOLD ? point_id : -1;
+  return min_dist < threshold_ ? point_id : -1;
 }
 
 // add a new vertice into graph by coord
