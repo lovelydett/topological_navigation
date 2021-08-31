@@ -1,13 +1,16 @@
 <?xml version="1.0"?>
 <launch>
-   <arg name="resolution" type="float" default="100.0" />
-   <arg name="threshold_cm" type="float" default="5.0" />
+   <arg name="resolution" type="double" default="100.0" />
+   <arg name="threshold_cm" type="double" default="5.0" />
    <arg name="map_file_path" type="string" default="$(find topological_navigation)/map/topological_map.txt"/>
-   <node pkg="topological_navigation" type="topological_nav" name="topological_nav" output="screen">
-        <param name="resolution" type="float" value="$(arg resolution)"/>
-        <param name="threshold_cm" type="float" value="$(arg threshold_cm)"/>
-        <param name="map_file_path" type="string" value="$(arg map_file_path)"/>
-        <param name="hdmap_goal_topic" type="string" value="/move_base_simple/goal"/>
-        <param name="topological_goal_topic" type="string" value="/topological_nav/goal"/>
-   </node>
+
+   <!-- Put them here to make global, otherwise use ros::NodeHandle n("~")-->
+   <param name="resolution" type="double" value="$(arg resolution)"/>
+   <param name="threshold_cm" type="double" value="$(arg threshold_cm)"/>
+   <param name="map_file_path" type="string" value="$(arg map_file_path)"/>
+   <param name="hdmap_goal_topic" type="string" value="/move_base_simple/goal"/>
+   <param name="topological_goal_topic" type="string" value="/topological_nav/goal"/>
+
+   <node pkg="topological_navigation" type="topological_nav" name="topological_nav" output="screen"></node>
+
 </launch>

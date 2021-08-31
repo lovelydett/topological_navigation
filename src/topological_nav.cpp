@@ -43,6 +43,7 @@ private:
     n.param<float>("resolution", resolution, 100.f);
     n.param<std::string>("map_file_path", map_file_path,
                          "./topological_map.txt");
+    ROS_INFO("map_file_path set to: %s", map_file_path.c_str());
     n.param<std::string>("hdmap_goal_topic", hdmap_goal_topic_,
                          "/move_base_simple/goal");
     n.param<std::string>("topological_goal_topic", topological_goal_topic_,
@@ -52,8 +53,11 @@ private:
     m = new TopologicalMap(resolution, threshold_cm);
 
     // load topological map
-    if (-1 == m->load_from_file(map_file_path)) {
-      ROS_ERROR("unable to load topological map: %s", map_file_path.c_str());
+    if (!m->load_from_file(map_file_path)) {
+      ROS_ERROR("unable to load topological map: %s, shutting down",
+                map_file_path.c_str());
+      ros::shutdown();
+      exit(-1);
     } else {
       ROS_INFO("topological map: %s loaded, %d points in total",
                map_file_path.c_str(), m->num_vertices());
