@@ -155,7 +155,7 @@ private:
     ROS_ASSERT(m->get_coord_by_id(path.front(), &cur_goal));
     // validate that we are getting closer if we are in navigation
     float dist = getDist(cur_pos, cur_goal);
-    if (dist < distance_to_next_goal_) {
+    if (dist > distance_to_next_goal_) {
       ROS_WARN("seems we are getting farther from current goal");
     }
     distance_to_next_goal_ = dist;

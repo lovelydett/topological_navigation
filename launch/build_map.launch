@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
    <arg name="resolution" default="100.0" />
-   <arg name="threshold_cm" default="5.0" />
+   <arg name="threshold_cm" default="10.0" />
    <arg name="map_file_path" default="$(find topological_navigation)/map/topological_map.txt"/>
    <param name="resolution" type="double" value="$(arg resolution)"/>
    <param name="threshold_cm" type="double" value="$(arg threshold_cm)"/>
