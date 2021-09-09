@@ -86,7 +86,8 @@ public:
                "need to add, just update last pos to %d",
                current_pos_.x, current_pos_.y, coord.x, coord.y, id);
       // should also add a path <last, cur> to avoid breaking the graph
-      m->add_edge_undirected(last_pos_id_, id);
+      // tt@2021.9.9: in sandbox we have to create directed edges
+      m->add_edge_directed(last_pos_id_, id);
       last_pos_id_ = id;
       return false;
     }
@@ -100,7 +101,8 @@ public:
       return true;
     }
     // add an edge between cur and last
-    if (!m->add_edge_undirected(id, last_pos_id_)) {
+    // tt@2021.9.9: in sandbox we have to create directed edges
+    if (!m->add_edge_directed(last_pos_id_, id)) {
       ROS_ERROR("failed to add new edge");
       return false;
     }
